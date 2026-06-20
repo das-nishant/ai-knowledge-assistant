@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.llm import LLMService
+from app.services.llm import generate_response
 
 router = APIRouter()
 
+
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    try:
-        response_text = await LLMService().generate_response(request.message)
-        return ChatResponse(reply=response_text)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+def chat(request: ChatRequest):
+
+    answer = generate_response(request.message)
+
+    return ChatResponse(response=answer)
