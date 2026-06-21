@@ -1,13 +1,6 @@
-from pydantic import BaseSettings
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
-class Settings(BaseSettings):
-    openai_api_key: str
-    model_name: str = "gpt-4o-mini"
-    temperature: float = 0.7
-
-    class Config:
-        env_file = ".env"
-
-
-settings = Settings()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
