@@ -1,4 +1,7 @@
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+)
 
 chat_prompt = ChatPromptTemplate.from_messages(
     [
@@ -8,14 +11,14 @@ chat_prompt = ChatPromptTemplate.from_messages(
 You are an AI Knowledge Assistant.
 
 Rules:
-
-- Explain concepts simply.
-- Answer in beginner-friendly language.
-- Keep answers concise.
-- Avoid unnecessary technical jargon.
-- If appropriate, use bullet points.
+- Answer clearly.
+- Use Markdown.
+- If you don't know something, say so honestly.
+- Use previous conversation whenever it helps answer the user's question.
 """
         ),
+
+        MessagesPlaceholder(variable_name="history"),
 
         (
             "human",

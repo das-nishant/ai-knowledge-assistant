@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -12,12 +12,14 @@ class Message(Base):
 
     conversation_id = Column(
         Integer,
-        ForeignKey("conversations.id")
+        ForeignKey("conversations.id", ondelete="CASCADE")
     )
 
     role = Column(String)
 
     content = Column(Text)
+
+    sources = Column(JSON, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

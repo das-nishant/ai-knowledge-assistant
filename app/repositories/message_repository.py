@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-
 from app.models.message import Message
 
 
@@ -8,11 +7,13 @@ def save_message(
     conversation_id: int,
     role: str,
     content: str,
-):
+    sources: list[dict] | None = None,
+) -> Message:
     message = Message(
         conversation_id=conversation_id,
         role=role,
         content=content,
+        sources=sources,
     )
 
     db.add(message)
@@ -29,6 +30,6 @@ def get_messages(
     return (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id)
-        .order_by(Message.id)
+        .order_by(Message.created_at.asc())
         .all()
     )
