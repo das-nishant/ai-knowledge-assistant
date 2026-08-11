@@ -54,6 +54,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       await get().fetchDocuments();
       await get().fetchStats();
       set({ isUploading: false, error: null });
+
+      // Automatically refresh document status after background indexing completes
+      if (doc.status === 'processing') {
+        setTimeout(async () => {
+          await get().fetchDocuments();
+          await get().fetchStats();
+        }, 2500);
+      }
+
       return doc;
     } catch (err: any) {
       const detail = err.response?.data?.detail;

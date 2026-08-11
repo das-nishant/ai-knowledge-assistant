@@ -6,7 +6,7 @@ import 'highlight.js/styles/atom-one-dark.css';
 
 import { useChatStore } from '../store/chatStore';
 import { useDocumentStore } from '../store/documentStore';
-import { CitationSource } from '../types';
+import type { CitationSource } from '../types';
 import {
   Send,
   Bot,
@@ -18,10 +18,10 @@ import {
   Sparkles,
   Edit2,
   Plus,
-  ChevronDown,
+  Download,
   Layers,
-  Info,
   X,
+  RotateCcw,
 } from 'lucide-react';
 
 export const Chat: React.FC = () => {
@@ -31,7 +31,6 @@ export const Chat: React.FC = () => {
     currentConversationId,
     selectedDocumentId,
     isSending,
-    isLoadingMessages,
     setSelectedDocumentId,
     sendMessage,
     startNewChat,
@@ -85,6 +84,41 @@ export const Chat: React.FC = () => {
     }
   };
 
+  const exportChatToMarkdown = () => {
+    if (messages.length === 0) return;
+    let mdContent = `# AI Knowledge Assistant Chat Export\n**Title:** ${currentTitle || 'Conversation'}\n**Date:** ${new Date().toLocaleString()}\n\n---\n\n`;
+    messages.forEach((msg) => {
+      const role = msg.role === 'user' ? '👤 User' : '🤖 AI Assistant';
+      mdContent += `### ${role}\n${msg.content}\n\n`;
+      if (msg.sources && msg.sources.length > 0) {
+        mdContent += `*Sources Cited:*\n`;
+        msg.sources.forEach((src) => {
+          mdContent += `- ${src.filename} (Page ${src.page || 'N/A'})\n`;
+        });
+        mdContent += `\n`;
+      }
+      mdContent += `---\n\n`;
+    });
+
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${(currentTitle || 'chat_export').replace(/[^a-z0-9]/gi, '_')}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRegenerateLast = () => {
+    if (messages.length >= 2) {
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+      if (lastUserMsg) {
+        sendMessage(lastUserMsg.content);
+      }
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-6.5rem)] flex flex-col glass-panel rounded-2xl border border-white/10 overflow-hidden relative">
       {/* Header Bar */}
@@ -127,6 +161,7 @@ export const Chat: React.FC = () => {
                     setIsRenaming(true);
                   }}
                   className="text-slate-500 hover:text-slate-300 p-1"
+                  title="Rename Title"
                 >
                   <Edit2 className="w-3 h-3" />
                 </button>
@@ -157,6 +192,17 @@ export const Chat: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {messages.length > 0 && (
+            <button
+              onClick={exportChatToMarkdown}
+              className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors flex items-center gap-1 text-xs"
+              title="Export Conversation to Markdown (.md)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Export</span>
+            </button>
+          )}
 
           <button
             onClick={startNewChat}
@@ -202,7 +248,7 @@ export const Chat: React.FC = () => {
             </div>
           </div>
         ) : (
-          messages.map((msg) => (
+          messages.map((msg, index) => (
             <div
               key={msg.id}
               className={`flex gap-3 md:gap-4 max-w-4xl mx-auto ${
@@ -263,19 +309,30 @@ export const Chat: React.FC = () => {
                   </div>
                 )}
 
-                {/* Copy Button */}
+                {/* Response Controls */}
                 {msg.role === 'assistant' && (
-                  <button
-                    onClick={() => copyToClipboard(msg.content, msg.id)}
-                    className="absolute top-2 right-2 p-1 text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Copy response"
-                  >
-                    {copiedId === msg.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {index === messages.length - 1 && (
+                      <button
+                        onClick={handleRegenerateLast}
+                        className="p-1 text-slate-500 hover:text-slate-300"
+                        title="Regenerate answer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={() => copyToClipboard(msg.content, msg.id)}
+                      className="p-1 text-slate-500 hover:text-slate-300"
+                      title="Copy response"
+                    >
+                      {copiedId === msg.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -354,7 +411,18 @@ export const Chat: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-2 text-right">
+            <div className="pt-2 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(activeCitation.content);
+                  alert('Source snippet copied!');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Snippet</span>
+              </button>
+
               <button
                 onClick={() => setActiveCitation(null)}
                 className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-medium"

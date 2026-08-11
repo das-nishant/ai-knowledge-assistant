@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+
 import { useDocumentStore } from '../store/documentStore';
 import { useChatStore } from '../store/chatStore';
+import { documentService, DocumentSummary } from '../services/documents';
 import {
   FileText,
-  Upload,
   Search,
   Trash2,
   RefreshCw,
@@ -15,6 +19,9 @@ import {
   AlertCircle,
   Plus,
   X,
+  Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 export const Documents: React.FC = () => {
@@ -37,6 +44,13 @@ export const Documents: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Summary State
+  const [summaryData, setSummaryData] = useState<DocumentSummary | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryDocName, setSummaryDocName] = useState('');
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -62,6 +76,39 @@ export const Documents: React.FC = () => {
     navigate('/chat');
   };
 
+  const handleGenerateSummary = async (docId: number, filename: string) => {
+    setSummaryDocName(filename);
+    setIsGeneratingSummary(true);
+    setSummaryData(null);
+    try {
+      const res = await documentService.generateSummary(docId);
+      setSummaryData(res);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to generate document summary.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const copySummary = () => {
+    if (summaryData) {
+      navigator.clipboard.writeText(summaryData.summary);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2000);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
+    try {
+      await deleteDocument(deleteConfirmId);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
+    }
+  };
+
   const formatBytes = (bytes?: number) => {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -80,7 +127,7 @@ export const Documents: React.FC = () => {
             Knowledge Base Documents
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">
-            Manage your PDF knowledge base, monitor indexing status, or re-index files.
+            Manage your PDF knowledge base, generate AI executive summaries, or re-index files.
           </p>
         </div>
 
@@ -224,6 +271,16 @@ export const Documents: React.FC = () => {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* AI Summary Button */}
+                        <button
+                          onClick={() => handleGenerateSummary(doc.id, doc.filename)}
+                          title="Generate AI Executive Summary"
+                          className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium text-[11px] flex items-center gap-1.5 shadow hover:from-purple-500 hover:to-indigo-500 transition-all"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>AI Summary</span>
+                        </button>
+
                         <button
                           onClick={() => handleAskInChat(doc.id)}
                           title="Ask in Chat"
@@ -268,20 +325,90 @@ export const Documents: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium"
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
-                onClick={async () => {
-                  await deleteDocument(deleteConfirmId);
-                  setDeleteConfirmId(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-500"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-500 disabled:opacity-50 flex items-center gap-2"
               >
-                Delete Document
+                {isDeleting ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete Document</span>
+                )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Summary Modal */}
+      {(isGeneratingSummary || summaryData) && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-2xl rounded-2xl p-6 border border-white/10 shadow-2xl space-y-4 max-h-[85vh] flex flex-col relative">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2 text-purple-400">
+                <Sparkles className="w-5 h-5" />
+                <h3 className="font-bold text-white text-base truncate">
+                  AI Summary: {summaryDocName}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setSummaryData(null);
+                  setIsGeneratingSummary(false);
+                }}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {isGeneratingSummary ? (
+                <div className="p-12 text-center text-slate-400 space-y-3">
+                  <span className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto block" />
+                  <p className="text-sm font-medium text-white">Analyzing document structure & key concepts...</p>
+                  <p className="text-xs text-slate-500">Generating executive summary with Groq Llama 3.1 LLM</p>
+                </div>
+              ) : (
+                <div className="prose prose-invert prose-sm max-w-none text-slate-200">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                    {summaryData?.summary || ''}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {summaryData && (
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                <button
+                  onClick={copySummary}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                >
+                  {copiedSummary ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSummary ? 'Copied Summary' : 'Copy Summary'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleAskInChat(summaryData.document_id);
+                    setSummaryData(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-medium flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all glow-btn"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Start Chatting about this PDF</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

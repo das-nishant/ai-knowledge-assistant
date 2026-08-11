@@ -27,6 +27,7 @@ export const History: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -48,6 +49,13 @@ export const History: React.FC = () => {
     setEditingId(null);
   };
 
+  const handleClearAll = async () => {
+    for (const c of conversations) {
+      await deleteConversation(c.id);
+    }
+    setConfirmClearAll(false);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -58,20 +66,32 @@ export const History: React.FC = () => {
             Conversation History
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">
-            Review past RAG interactions, manage conversation titles, or clean up history.
+            Review past RAG interactions, export chats, or manage titles.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            startNewChat();
-            navigate('/chat');
-          }}
-          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all glow-btn shrink-0"
-        >
-          <MessageSquarePlus className="w-4 h-4" />
-          <span>New AI Conversation</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {conversations.length > 0 && (
+            <button
+              onClick={() => setConfirmClearAll(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium text-xs flex items-center gap-1.5 transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Clear History</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              startNewChat();
+              navigate('/chat');
+            }}
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all glow-btn shrink-0"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+            <span>New AI Conversation</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -170,6 +190,32 @@ export const History: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Clear All Confirmation Modal */}
+      {confirmClearAll && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-white/10 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white">Clear All Chat History</h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to delete all saved conversations? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setConfirmClearAll(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-500"
+              >
+                Clear All History
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

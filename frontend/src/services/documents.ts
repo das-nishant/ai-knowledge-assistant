@@ -1,6 +1,12 @@
 import { api } from './api';
 import type { Document, DocumentStats } from '../types';
 
+export interface DocumentSummary {
+  document_id: number;
+  filename: string;
+  summary: string;
+}
+
 export const documentService = {
   async getDocuments(search?: string): Promise<Document[]> {
     const params = search ? { search } : {};
@@ -17,9 +23,12 @@ export const documentService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    // Note: Do NOT manually set 'Content-Type': 'multipart/form-data' in Axios with FormData,
-    // so Axios can automatically generate the correct boundary string for FastAPI.
     const response = await api.post<Document>('/documents/upload', formData);
+    return response.data;
+  },
+
+  async generateSummary(documentId: number): Promise<DocumentSummary> {
+    const response = await api.post<DocumentSummary>(`/documents/${documentId}/summary`);
     return response.data;
   },
 

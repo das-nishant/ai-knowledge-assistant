@@ -20,3 +20,9 @@ class DocumentStats(BaseModel):
     total_file_size_bytes: int
     total_pages: int
     indexed_count: int
+
+
+class DocumentSummaryResponse(BaseModel):
+    document_id: int
+    filename: str
+    summary: str

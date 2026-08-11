@@ -23,17 +23,19 @@ def create_vectorstore(
     user_id: int | None = None,
     document_id: int | None = None,
     filename: str | None = None,
+    documents: list | None = None,
 ):
     clean_filename = filename or os.path.basename(file_path)
 
-    # Load PDF
-    try:
-        documents = load_pdf(file_path)
-    except Exception as e:
-        print(f"Warning: load_pdf error for {file_path}: {e}")
-        documents = []
+    # Use pre-loaded documents if provided, otherwise load from disk
+    if documents is None:
+        try:
+            documents = load_pdf(file_path)
+        except Exception as e:
+            print(f"Warning: load_pdf error for {file_path}: {e}")
+            documents = []
 
-    # Split PDF
+    # Split PDF into context chunks
     if documents:
         chunks = split_documents(documents)
     else:
@@ -60,8 +62,7 @@ def create_vectorstore(
         if "page" in chunk.metadata:
             try:
                 raw_page = int(chunk.metadata["page"])
-                # PyPDFLoader metadata['page'] is 0-indexed (0=Page 1, 4=Page 5, 5=Page 6).
-                # Always add 1 to get exact 1-indexed human physical page numbers!
+                # PyPDFLoader metadata['page'] is 0-indexed. Always add 1 for 1-indexed pages.
                 page_num = raw_page + 1
                 chunk.metadata["page"] = page_num
             except (ValueError, TypeError):
@@ -72,7 +73,7 @@ def create_vectorstore(
         if not chunk.page_content.startswith("Page "):
             chunk.page_content = header + chunk.page_content
 
-    # Embedding model
+    # Embedding model (uses globally cached model instance)
     embeddings = get_embedding_model()
 
     # Store in ChromaDB
