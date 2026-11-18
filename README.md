@@ -190,8 +190,8 @@ ai-knowledge-assistant/
 
 ---
 
-## 📝 License & Author
+ 
 
-**Author**: Senior AI Engineer  
+  
 **Project**: AI Knowledge Assistant (Full-Stack RAG SaaS)  
-**License**: MIT License
+ 
