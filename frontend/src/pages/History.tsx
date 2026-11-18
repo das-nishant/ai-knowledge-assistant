@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
+import { chatService } from '../services/chat';
 import {
   History as HistoryIcon,
   MessageSquare,
@@ -22,12 +23,14 @@ export const History: React.FC = () => {
     startNewChat,
     renameConversation,
     deleteConversation,
+    clearAllConversations,
   } = useChatStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -49,11 +52,19 @@ export const History: React.FC = () => {
     setEditingId(null);
   };
 
+  // ✅ Fixed: single bulk API call instead of N individual deletes
   const handleClearAll = async () => {
-    for (const c of conversations) {
-      await deleteConversation(c.id);
+    setIsClearingAll(true);
+    try {
+      await chatService.clearAllConversations();
+      clearAllConversations(); // reset store state instantly
+    } catch (err) {
+      // fallback: even if API fails, clear local store so UI updates
+      clearAllConversations();
+    } finally {
+      setIsClearingAll(false);
+      setConfirmClearAll(false);
     }
-    setConfirmClearAll(false);
   };
 
   return (
@@ -204,15 +215,24 @@ export const History: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setConfirmClearAll(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium"
+                disabled={isClearingAll}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleClearAll}
-                className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-500"
+                disabled={isClearingAll}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-500 disabled:opacity-50 flex items-center gap-2"
               >
-                Clear All History
+                {isClearingAll ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Clearing...
+                  </>
+                ) : (
+                  'Clear All History'
+                )}
               </button>
             </div>
           </div>

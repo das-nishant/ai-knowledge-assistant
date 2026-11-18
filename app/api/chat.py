@@ -164,3 +164,15 @@ def remove_conversation(
             detail="Conversation not found",
         )
     return {"message": "Conversation deleted successfully", "conversation_id": conversation_id}
+
+
+@router.delete("/conversations")
+def clear_all_conversations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conversations = get_conversations_by_user(db=db, user_id=current_user.id)
+    count = len(conversations)
+    for conv in conversations:
+        delete_conversation(db=db, conversation_id=conv.id, user_id=current_user.id)
+    return {"message": f"Successfully deleted {count} conversations", "deleted_count": count}

@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 
-from app.core.config import GROQ_API_KEY
+from app.core.config import GROQ_API_KEY, GROQ_MODEL
 from app.prompts.rag_prompt import rag_prompt
 from app.rag.retriever import get_retriever, CHROMA_PERSIST_DIR
 from app.rag.embeddings import get_embedding_model
@@ -21,11 +21,11 @@ from app.repositories.message_repository import (
     get_messages,
 )
 
-MAX_CONTEXT_CHARS = 4000  # Strict context character budget to prevent Groq 6000 TPM rate limit
+MAX_CONTEXT_CHARS = 8000  # Context character budget for rich multi-page synthesis
 MAX_HISTORY_MESSAGES = 6   # Keep last 3 Q&A turns
 
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model=GROQ_MODEL,
     api_key=GROQ_API_KEY,
     temperature=0.2,
 )
@@ -55,6 +55,43 @@ def extract_target_page(query: str) -> int | None:
         except (ValueError, TypeError):
             return None
     return None
+
+
+def reformulate_query(message: str, history: list) -> str:
+    """
+    Given chat history and a follow-up question, rephrase it into a standalone question
+    suitable for vector retrieval without changing the intent.
+    """
+    if not history:
+        return message
+
+    pronoun_indicators = {
+        "it", "this", "that", "these", "those", "they", "them", "its", "their",
+        "why", "how", "what about", "more", "explain", "detail", "tell me more"
+    }
+    words = set(re.findall(r'\b\w+\b', message.lower()))
+    has_pronoun_or_short = len(message.split()) < 8 or bool(words & pronoun_indicators)
+
+    if not has_pronoun_or_short:
+        return message
+
+    try:
+        history_summary = "\n".join(
+            [f"{'User' if isinstance(m, HumanMessage) else 'Assistant'}: {m.content[:200]}" for m in history[-4:]]
+        )
+        prompt = (
+            f"Given the chat history below and a follow-up question, rephrase the follow-up question "
+            f"to be a standalone search query containing all necessary context and subject matter. "
+            f"Do not answer the question. Only output the rephrased standalone query in one concise sentence.\n\n"
+            f"Chat History:\n{history_summary}\n\n"
+            f"Follow-up Question: {message}\n\n"
+            f"Standalone Query:"
+        )
+        res = llm.invoke(prompt)
+        standalone = res.content.strip().strip('"').strip("'")
+        return standalone if len(standalone) > 3 else message
+    except Exception:
+        return message
 
 
 def generate_response(
@@ -90,13 +127,16 @@ def generate_response(
         else:
             history.append(AIMessage(content=msg.content[:500]))
 
-    # General similarity retriever (k=5 to keep context size optimal)
-    top_k = 5
-    retriever = get_retriever(user_id=user_id, document_id=document_id, top_k=top_k)
-    docs = retriever.invoke(message)
+    # Reformulate query when follow-up context is required
+    search_query = reformulate_query(message, history)
+
+    # MMR Retriever (k=6, search_type="mmr" for diverse relevant chunks)
+    top_k = 6
+    retriever = get_retriever(user_id=user_id, document_id=document_id, top_k=top_k, search_type="mmr")
+    docs = retriever.invoke(search_query)
 
     # Smart Page Number Detection & Retrieval
-    target_page = extract_target_page(message)
+    target_page = extract_target_page(message) or extract_target_page(search_query)
     if target_page is not None:
         try:
             embeddings = get_embedding_model()
@@ -104,14 +144,18 @@ def generate_response(
                 persist_directory=CHROMA_PERSIST_DIR,
                 embedding_function=embeddings,
             )
-            
-            filter_conditions = [{"page": target_page}]
+
+            # Build filter carefully — Chroma rejects $and with a single condition
+            page_filter_conditions = [{"page": target_page}]
             if user_id is not None:
-                filter_conditions.append({"user_id": int(user_id)})
+                page_filter_conditions.append({"user_id": int(user_id)})
             if document_id is not None:
-                filter_conditions.append({"document_id": int(document_id)})
-            
-            filter_dict = {"$and": filter_conditions} if len(filter_conditions) > 1 else filter_conditions[0]
+                page_filter_conditions.append({"document_id": int(document_id)})
+
+            if len(page_filter_conditions) == 1:
+                filter_dict = page_filter_conditions[0]
+            else:
+                filter_dict = {"$and": page_filter_conditions}
             
             page_specific_docs = vectorstore.similarity_search(
                 query=message,

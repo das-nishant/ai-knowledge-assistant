@@ -42,4 +42,9 @@ export const chatService = {
   async deleteConversation(conversationId: number): Promise<void> {
     await api.delete(`/conversations/${conversationId}`);
   },
+
+  async clearAllConversations(): Promise<{ message: string; deleted_count: number }> {
+    const response = await api.delete<{ message: string; deleted_count: number }>('/conversations');
+    return response.data;
+  },
 };

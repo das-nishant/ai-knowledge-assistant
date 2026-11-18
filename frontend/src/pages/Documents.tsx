@@ -376,7 +376,7 @@ export const Documents: React.FC = () => {
                 <div className="p-12 text-center text-slate-400 space-y-3">
                   <span className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto block" />
                   <p className="text-sm font-medium text-white">Analyzing document structure & key concepts...</p>
-                  <p className="text-xs text-slate-500">Generating executive summary with Groq Llama 3.1 LLM</p>
+                  <p className="text-xs text-slate-500">Generating executive summary with AI Language Model...</p>
                 </div>
               ) : (
                 <div className="prose prose-invert prose-sm max-w-none text-slate-200">

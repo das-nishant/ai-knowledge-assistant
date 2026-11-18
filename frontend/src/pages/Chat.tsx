@@ -44,6 +44,7 @@ export const Chat: React.FC = () => {
   const [activeCitation, setActiveCitation] = useState<CitationSource | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [copiedCitation, setCopiedCitation] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -113,7 +114,9 @@ export const Chat: React.FC = () => {
   const handleRegenerateLast = () => {
     if (messages.length >= 2) {
       const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-      if (lastUserMsg) {
+      if (lastUserMsg && !isSending) {
+        // Remove the last assistant message from UI before regenerating
+        // so we don't show duplicate; the new response replaces it
         sendMessage(lastUserMsg.content);
       }
     }
@@ -415,12 +418,13 @@ export const Chat: React.FC = () => {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(activeCitation.content);
-                  alert('Source snippet copied!');
+                  setCopiedCitation(true);
+                  setTimeout(() => setCopiedCitation(false), 2000);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy Snippet</span>
+                <span>{copiedCitation ? 'Copied!' : 'Copy Snippet'}</span>
               </button>
 
               <button

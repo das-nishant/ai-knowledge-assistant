@@ -13,6 +13,7 @@ A production-grade, full-stack **Retrieval-Augmented Generation (RAG)** SaaS web
 The platform allows users to upload PDF documents, ask natural language questions, generate instant AI Executive Summaries, and receive grounded answers with precise physical page citations and source snippet popovers.
 
 ---
+---
 
 ## 📌 Key Features
 
@@ -137,6 +138,7 @@ ai-knowledge-assistant/
    DATABASE_URL=postgresql://postgres:Junior03@localhost:5432/ai_knowledge_assistant
    SECRET_KEY=your_super_secret_jwt_key_here
    GROQ_API_KEY=gsk_your_groq_api_key_here
+   GROQ_MODEL=openai/gpt-oss-20b
    ```
 
 5. **Start the FastAPI Backend Server**:

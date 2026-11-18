@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query, 
 from sqlalchemy.orm import Session
 from langchain_groq import ChatGroq
 
-from app.core.config import GROQ_API_KEY
+from app.core.config import GROQ_API_KEY, GROQ_MODEL
 from app.core.database import get_db, SessionLocal
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -192,7 +192,7 @@ Provide a structured, beautifully formatted response using Markdown:
 
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model=GROQ_MODEL,
             api_key=GROQ_API_KEY,
             temperature=0.3,
         )

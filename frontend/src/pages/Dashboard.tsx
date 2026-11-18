@@ -120,7 +120,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Pages</p>
             <h3 className="text-2xl font-bold text-white mt-1">{stats?.total_pages || 0}</h3>
-            <p className="text-[11px] text-slate-400 mt-1">ChromaDB Chunked</p>
+            <p className="text-[11px] text-slate-400 mt-1">Indexed pages</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
             <Layers className="w-6 h-6" />

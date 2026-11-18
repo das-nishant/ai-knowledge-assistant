@@ -156,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onCloseMobile }) =
       <div className="pt-4 border-t border-white/10 mt-auto text-[11px] text-slate-500 flex items-center justify-between">
         <span>Grounded RAG System</span>
         <span className="flex items-center gap-1 text-indigo-400 font-medium">
-          <Sparkles className="w-3 h-3" /> Groq AI
+          <Sparkles className="w-3 h-3" /> AI Powered
         </span>
       </div>
     </div>

@@ -20,6 +20,7 @@ interface ChatState {
   sendMessage: (prompt: string) => Promise<void>;
   renameConversation: (conversationId: number, title: string) => Promise<void>;
   deleteConversation: (conversationId: number) => Promise<void>;
+  clearAllConversations: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -151,5 +152,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (err: any) {
       set({ error: err.response?.data?.detail || 'Failed to delete conversation' });
     }
+  },
+
+  clearAllConversations: () => {
+    set({
+      conversations: [],
+      messages: [],
+      currentConversationId: null,
+      currentTitle: null,
+      error: null,
+    });
   },
 }));

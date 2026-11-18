@@ -1,13 +1,13 @@
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 
-from app.core.config import GROQ_API_KEY
+from app.core.config import GROQ_API_KEY, GROQ_MODEL
 from app.prompts.rag_prompt import rag_prompt
 from app.rag.retriever import get_retriever
 
 
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model=GROQ_MODEL,
     api_key=GROQ_API_KEY,
 )
 
